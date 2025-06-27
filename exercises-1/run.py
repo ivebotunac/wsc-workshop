@@ -1,12 +1,6 @@
 # Main runner for the weather agent
-import os
-import sys
-from pathlib import Path
 from dotenv import load_dotenv
 
-from langgraph.graph import StateGraph, START, END
-from langchain_core.messages import HumanMessage
-from state import WeatherResearchState
 from weather_agent import WeatherResearchAgent
 
 def main():
