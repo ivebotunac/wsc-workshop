@@ -5,7 +5,7 @@ def get_weather_with_tavily(city: str) -> str:
     """Get current weather for a city using Tavily search"""
     # Initialize search tool with max 2 results
     search_tool = TavilySearchResults(max_results=2)
-    query = f"current weather in {city} today temperature"
+    query = f"What is the current weather in {city} and today's temperature?"
     results = search_tool.invoke(query)
     
     # Combine search results into weather info
