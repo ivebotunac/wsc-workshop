@@ -1,15 +1,16 @@
 # Main runner for the weather agent
 from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage
 
-from weather_agent import WeatherResearchAgent
+from workflow import create_weather_workflow
 
 def main():
-    """Main function - creates agent and runs interactive loop"""
-    # Load environment variables (.env file)
+    """Main function - creates workflow and runs interactive loop."""
+    # Load environment variables from .env file
     load_dotenv()
     
-    # Initialize the weather agent
-    agent = WeatherResearchAgent()
+    # Create the weather workflow
+    app = create_weather_workflow()
     
     # Start interactive chat loop
     print("🌤️ Weather Agent")
@@ -26,7 +27,12 @@ def main():
         # Process user input through the workflow
         if user_input:
             print("\n🔍 Getting weather...")
-            result = agent.invoke(user_input)
+            
+            # Create initial state and run workflow
+            initial_state = {"messages": [HumanMessage(content=user_input)]}
+            result = app.invoke(initial_state)
+            
+            # Display the weather information
             print(f"\nAgent:\n {result['messages'][-1].content}\n")
 
 if __name__ == "__main__":
