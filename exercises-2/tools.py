@@ -1,16 +1,11 @@
 # Weather and search tools for REACT agent
+from langchain_core.tools import tool
 from langchain_community.tools.tavily_search import TavilySearchResults
 
-# TODO: Implement weather search function
+@tool
 def get_weather_with_tavily(city: str) -> str:
     """
     Get current weather for a city using Tavily search.
-    
-    Steps:
-    1. Initialize TavilySearchResults with max_results=2
-    2. Create a weather query for the city
-    3. Invoke the search tool
-    4. Format and return the results
     
     Args:
         city: Name of the city to get weather for
@@ -18,10 +13,19 @@ def get_weather_with_tavily(city: str) -> str:
     Returns:
         Formatted weather information string
     """
-    # Your code here:
-    return ""  # Replace with proper implementation
+    # Initialize search tool with max 2 results
+    search_tool = TavilySearchResults(max_results=2)
+    query = f"What is the current weather in {city} and today's temperature?"
+    results = search_tool.invoke(query)
+    
+    # Combine search results into weather info
+    if results:
+        weather_info = " ".join([result['content'][:150] for result in results[:2]])
+        return f"Weather in {city}: {weather_info}"
+    else:
+        return f"Weather in {city}: No current weather data available"
 
-# TODO: Implement general search function
+@tool 
 def search_additional_info(query: str) -> str:
     """
     Search for additional information using Tavily.
@@ -33,5 +37,15 @@ def search_additional_info(query: str) -> str:
     Returns:
         Search results as formatted string
     """
-    # Your code here:
-    return ""  # Replace with proper implementation 
+    # Initialize search tool with max 3 results for broader search
+    search_tool = TavilySearchResults(max_results=3)
+    results = search_tool.invoke(query)
+    
+    if results:
+        search_info = " ".join([result['content'][:200] for result in results[:3]])
+        return f"Search results for '{query}': {search_info}"
+    else:
+        return f"No search results found for: {query}"
+
+# List of all available tools
+tools = [get_weather_with_tavily, search_additional_info] 

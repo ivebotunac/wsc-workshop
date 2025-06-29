@@ -1,80 +1,77 @@
-# REACT Weather agent node functions for LangGraph workflow
-from langchain_core.messages import HumanMessage, AIMessage
+# REACT Weather agent node functions following LangGraph tutorial
+import json
+from langchain_core.messages import ToolMessage, SystemMessage, AIMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 
 from state import WeatherReactState
-from tools import get_weather_with_tavily, search_additional_info
+from tools import tools
 
 class WeatherReactAgent:
-    """REACT weather agent with node functions for iterative decision making."""
+    """REACT weather agent following LangGraph tutorial pattern."""
     
     def __init__(self):
-        # Initialize OpenAI model for reasoning and decision making
+        # Initialize OpenAI model and bind tools (following tutorial)
         self.model = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+        self.model = self.model.bind_tools(tools)
+        
+        # Create tools lookup dictionary
+        self.tools_by_name = {tool.name: tool for tool in tools}
     
-    # TODO: Implement reasoning node
-    def reasoning_node(self, state: WeatherReactState) -> dict:
+    def call_model(self, state: WeatherReactState) -> dict:
         """
-        REACT Reasoning Node: Analyze the current state and decide next action.
+        REACT call_model node: Calls the LLM to decide next action.
         
-        This node should:
-        1. Look at the conversation history
-        2. Determine what information is needed
-        3. Decide the next action: "weather", "search", or "end"
-        4. Update the state with the decision
-        
-        Returns:
-            Updated state with next_action field
+        Following LangGraph tutorial pattern - this node calls the model
+        which can decide to use tools or provide final response.
         """
-        # Your code here:
-        return {}  # Replace with proper implementation
+        # System prompt for weather assistant
+        system_prompt = SystemMessage(
+            "You are a helpful weather assistant. You can get weather information and search for additional details. "
+            "Use the available tools when needed to provide accurate and helpful weather information to users."
+        )
+        
+        # Call model with system prompt + conversation history
+        response = self.model.invoke([system_prompt] + list(state["messages"]))
+        
+        # Return as list to be added to existing messages
+        return {"messages": [response]}
     
-    # TODO: Implement weather action node
-    def weather_action_node(self, state: WeatherReactState) -> dict:
+    def tool_node(self, state: WeatherReactState) -> dict:
         """
-        Action Node: Get weather information for the requested city.
+        REACT tool_node: Executes the tools requested by the model.
         
-        This node should:
-        1. Extract city name from the latest message
-        2. Call get_weather_with_tavily() tool
-        3. Add the weather result to messages
-        4. Set next_action to "decide" for next reasoning step
-        
-        Returns:
-            Updated state with weather information and next action
+        Following LangGraph tutorial pattern - processes tool calls from the model.
         """
-        # Your code here:
-        return {}  # Replace with proper implementation
+        outputs = []
+        last_message = state["messages"][-1]
+        
+        # Process each tool call from the last message (only for AIMessage)
+        if isinstance(last_message, AIMessage) and hasattr(last_message, 'tool_calls') and last_message.tool_calls:
+            for tool_call in last_message.tool_calls:
+                tool_result = self.tools_by_name[tool_call["name"]].invoke(tool_call["args"])
+                outputs.append(
+                    ToolMessage(
+                        content=json.dumps(tool_result) if not isinstance(tool_result, str) else tool_result,
+                        name=tool_call["name"],
+                        tool_call_id=tool_call["id"],
+                    )
+                )
+        
+        return {"messages": outputs}
     
-    # TODO: Implement search action node  
-    def search_action_node(self, state: WeatherReactState) -> dict:
+    def should_continue(self, state: WeatherReactState) -> str:
         """
-        Action Node: Search for additional information.
+        REACT conditional edge: Determines whether to continue with tools or end.
         
-        This node should:
-        1. Determine what additional info is needed
-        2. Call search_additional_info() tool
-        3. Add search results to messages
-        4. Set next_action to "decide" for next reasoning step
-        
-        Returns:
-            Updated state with search results and next action
+        Following LangGraph tutorial pattern - checks if model wants to use tools.
         """
-        # Your code here:
-        return {}  # Replace with proper implementation
-    
-    # TODO: Implement final formatting node
-    def format_response_node(self, state: WeatherReactState) -> dict:
-        """
-        Final Node: Format the collected information into a user-friendly response.
+        messages = state["messages"]
+        last_message = messages[-1]
         
-        This node should:
-        1. Combine all gathered information
-        2. Use the LLM to format a final response
-        3. Set next_action to "end"
-        
-        Returns:
-            Final formatted response
-        """
-        # Your code here:
-        return {}  # Replace with proper implementation 
+        # If there are tool calls, continue to tools
+        if isinstance(last_message, AIMessage) and hasattr(last_message, 'tool_calls') and last_message.tool_calls:
+            return "continue"
+        # Otherwise, end the conversation
+        else:
+            return "end" 

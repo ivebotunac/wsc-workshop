@@ -1,59 +1,47 @@
-# REACT weather workflow definition with conditional routing
-from langgraph.graph import StateGraph, START, END
+# REACT weather workflow definition following LangGraph tutorial
+from langgraph.graph import StateGraph, END
 from weather_agent import WeatherReactAgent
 from state import WeatherReactState
 
-# TODO: Implement conditional edge function
-def should_continue(state: WeatherReactState) -> str:
-    """
-    Conditional edge function that determines the next node based on next_action.
-    
-    This function should:
-    1. Check the next_action field in state
-    2. Return the appropriate node name:
-       - "weather" -> weather_action_node
-       - "search" -> search_action_node  
-       - "format" -> format_response_node
-       - "end" -> END
-    
-    Args:
-        state: Current workflow state
-        
-    Returns:
-        Name of the next node to execute
-    """
-    # Your code here:
-    return ""  # Replace with proper implementation
-
-# TODO: Implement workflow creation function
 def create_weather_react_workflow():
     """
     Create and return the compiled REACT weather workflow.
     
-    The workflow should have:
-    1. A reasoning node that decides next actions
-    2. Action nodes for weather and search
-    3. A formatting node for final output
-    4. Conditional edges based on next_action decisions
-    
-    Flow:
-    START -> reasoning -> [weather/search/format] -> reasoning -> ... -> END
+    Following LangGraph tutorial pattern:
+    - agent node calls the model
+    - tools node executes tools
+    - conditional edge decides next step
     """
     # Initialize agent
     agent = WeatherReactAgent()
     
-    # TODO: Create StateGraph with WeatherReactState
-    # Your code here:
+    # Create StateGraph with WeatherReactState
+    workflow = StateGraph(WeatherReactState)
     
-    # TODO: Add all nodes
-    # workflow.add_node("reasoning", agent.reasoning_node)
-    # Add other nodes...
+    # Add nodes following tutorial pattern
+    workflow.add_node("agent", agent.call_model)
+    workflow.add_node("tools", agent.tool_node)
     
-    # TODO: Add edges
-    # workflow.add_edge(START, "reasoning")
-    # Add conditional edges...
+    # Set entry point to agent (following tutorial)
+    workflow.set_entry_point("agent")
     
-    # TODO: Compile and return workflow
-    # return workflow.compile()
+    # Add conditional edge from agent
+    workflow.add_conditional_edges(
+        # Start node
+        "agent",
+        # Function that determines next node
+        agent.should_continue,
+        # Mapping of outputs to nodes
+        {
+            # If tools needed, go to tools node
+            "continue": "tools",
+            # If done, end workflow
+            "end": END,
+        },
+    )
     
-    return None  # Replace with proper implementation 
+    # Add normal edge from tools back to agent (following tutorial)
+    workflow.add_edge("tools", "agent")
+    
+    # Compile and return workflow
+    return workflow.compile() 

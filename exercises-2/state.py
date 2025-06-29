@@ -1,22 +1,12 @@
 # State schema for REACT weather agent workflow
-from typing import TypedDict, Annotated, List
+from typing import TypedDict, Annotated, Sequence
 from langchain_core.messages import BaseMessage
+from langgraph.graph.message import add_messages
 
-# TODO: Implement function to combine message lists
-def add_messages(left: List[BaseMessage], right: List[BaseMessage]) -> List[BaseMessage]:
-    """
-    Function to combine two lists of messages.
-    You need to return the combined list of messages.
-    """
-    # Your code here:
-    return []  # Replace with proper implementation
-
-# TODO: Define state class for REACT agent
+# REACT agent state following LangGraph tutorial pattern
 class WeatherReactState(TypedDict):
     """
     State class that holds:
-    - messages: list of messages throughout the workflow
-    - next_action: next action the agent should take ("weather", "search", "decide", or "end")
+    - messages: sequence of messages throughout the workflow (with reducer)
     """
-    # Define the required fields here:
-    pass 
+    messages: Annotated[Sequence[BaseMessage], add_messages] 

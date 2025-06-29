@@ -3,6 +3,9 @@
 ## Overview
 In this exercise, you'll implement a REACT (Reason, Act, Observe) pattern weather agent that can make iterative decisions and multiple tool calls based on user requests.
 
+## Official LangGraph tutorial:
+[LangGraph ReAct agent tutorial](https://langchain-ai.github.io/langgraph/how-tos/react-agent-from-scratch/)
+
 ## What You'll Build
 A weather agent that can:
 - Reason about what information is needed

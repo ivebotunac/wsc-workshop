@@ -8,4 +8,4 @@ def add_messages(left: List[BaseMessage], right: List[BaseMessage]) -> List[Base
 
 # State holds conversation messages throughout the workflow
 class WeatherResearchState(TypedDict):
-    messages: Annotated[List[BaseMessage], add_messages] 
+    messages: Annotated[List[BaseMessage], add_messages]
