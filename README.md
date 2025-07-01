@@ -136,3 +136,38 @@ Each request triggers all 5 specialized agents to provide comprehensive travel p
    TAVILY_API_KEY=your_key_here
    ```
 3. Run exercises: `python run.py` in each exercise directory
+
+## Navigate Between Exercise Versions
+
+You can use git tags to switch between different states of each exercise:
+
+### Available Tags:
+- `exercises-1-end` - Completed Exercise 1
+- `exercises-2-start` - Starting point for Exercise 2  
+- `exercises-2-end` - Completed Exercise 2
+- `exercises-3-start` - Starting point for Exercise 3
+- `exercises-3-end` - Completed Exercise 3
+
+### Usage:
+```bash
+# Go to start of Exercise 2 (empty template)
+git checkout exercises-2-start
+
+# Go to completed Exercise 2
+git checkout exercises-2-end
+
+# Go to start of Exercise 3 (empty template)  
+git checkout exercises-3-start
+
+# Go to completed Exercise 3
+git checkout exercises-3-end
+
+# Return to latest version
+git checkout main
+```
+
+This allows you to:
+- Start any exercise from scratch with template code
+- Jump to completed solutions for reference
+- Compare your implementation with the final version
+- Reset if you want to try again
