@@ -2,55 +2,40 @@
 import os
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
-from .workflow import create_travel_supervisor_workflow, initialize_travel_state
+from workflow import create_travel_supervisor_workflow, initialize_travel_state
 
 def print_travel_plan_results(final_state):
-    """
-    Print the final travel plan results in a formatted way.
+    """Prints final travel plan results in formatted way"""
     
-    Args:
-        final_state: Final state from workflow execution
-        
-    TODO: Implement result formatting
-    - Extract agent responses from final_state
-    - Print organized travel plan with sections for:
-        * Weather forecast and packing recommendations
-        * Flight options and booking details
-        * Accommodation recommendations  
-        * Activities and itinerary suggestions
-        * Budget breakdown and cost estimates
-    - Format output to be easy to read and actionable
-    """
-    # TODO: Extract final conversation messages
+    print("\n" + "="*60)
+    print("🎯 TRAVEL PLAN RESULTS")
+    print("="*60)
     
-    # TODO: Extract agent responses if available
+    # Print all messages from conversation
+    for i, msg in enumerate(final_state["messages"]):
+        if hasattr(msg, 'content') and msg.content:
+            print(f"\n--- Step {i+1} ---")
+            print(msg.content)
     
-    # TODO: Format and print travel plan sections
-    
-    # TODO: Print final recommendations
-    
-    print("TODO: Implement travel plan formatting")
+    print("\n" + "="*60)
 
 def main():
-    """
-    Main function to run the travel planning supervisor workflow.
+    """Main function to run the travel planning supervisor workflow"""
     
-    TODO: Implement main execution logic
-    - Load environment variables for API keys
-    - Create the travel supervisor workflow
-    - Run interactive loop for travel planning requests
-    - For each request:
-        * Initialize travel state from user input
-        * Execute workflow to completion
-        * Print formatted travel plan results
-    - Handle user input for new requests or exit
-    """
+    # Load environment variables
+    load_dotenv()
     
-    # TODO: Load environment variables
+    # Check if required API keys are present
+    if not os.getenv("OPENAI_API_KEY"):
+        print("❌ OPENAI_API_KEY is required in .env file")
+        return
     
-    # TODO: Verify required API keys are present
+    if not os.getenv("TAVILY_API_KEY"):
+        print("❌ TAVILY_API_KEY is required in .env file")
+        return
     
-    # TODO: Create travel supervisor workflow
+    # Create travel supervisor workflow
+    workflow = create_travel_supervisor_workflow()
     
     print("🌍 Travel Planning Supervisor Agent")
     print("=" * 50)
@@ -59,52 +44,43 @@ def main():
     print("- Travel dates (optional)")
     print("- Budget constraints (optional)")
     print("- Any special interests or requirements")
-    print("\nExample: 'Plan a 5-day trip to Paris in March with a $2000 budget'")
     print("Type 'quit' to exit\n")
     
     while True:
-        # TODO: Get user input for travel request
+        # Get user input for travel request
+        user_input = input("Your travel request: ").strip()
         
-        # TODO: Check for exit conditions
+        # Check for exit conditions
+        if user_input.lower() in ['quit', 'exit', 'q']:
+            print("Goodbye! 🌟")
+            break
         
-        # TODO: Initialize travel state from user request
+        if not user_input:
+            print("Please enter a travel request.")
+            continue
         
-        # TODO: Execute supervisor workflow
+        try:
+            # Initialize travel state from user request
+            initial_state = initialize_travel_state(user_input)
+            
+            print(f"\n🔄 Processing your request: '{user_input}'")
+            print("Please wait while supervisor coordinates agents...\n")
+            
+            # Execute supervisor workflow
+            final_state = workflow.invoke(initial_state)
+            
+            # Print formatted travel plan results
+            print_travel_plan_results(final_state)
+            
+        except Exception as e:
+            print(f"❌ Error during processing: {str(e)}")
         
-        # TODO: Print formatted travel plan results
-        
-        # TODO: Ask if user wants to plan another trip
-        
-        print("\n" + "=" * 50)
-
-def test_single_request():
-    """
-    Test function for development - runs a single travel planning request.
-    
-    TODO: Implement test function
-    - Load environment variables
-    - Create workflow
-    - Test with sample request like "Plan a weekend trip to Barcelona"
-    - Print results
-    - Use this for debugging and development
-    """
-    # TODO: Load environment and create workflow
-    
-    # TODO: Create test request
-    
-    # TODO: Initialize state and run workflow
-    
-    # TODO: Print results
-    
-    print("TODO: Implement test function")
+        # Ask if user wants to plan another trip
+        print("\n" + "="*50)
+        another = input("Would you like to plan another trip? (y/n): ").strip().lower()
+        if another not in ['y', 'yes']:
+            print("Goodbye! 🌟")
+            break
 
 if __name__ == "__main__":
-    # TODO: Choose between main() and test_single_request()
-    # Use test_single_request() during development
-    # Use main() for interactive experience
-    
-    # Uncomment one of these:
-    # test_single_request()
-    # main()
-    
-    print("TODO: Choose execution mode (main or test)") 
+    main() 

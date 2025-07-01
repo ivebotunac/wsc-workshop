@@ -1,173 +1,105 @@
 # Supervisor agent for coordinating travel planning specialists
 from typing import Literal
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_openai import ChatOpenAI
-from .state import TravelPlanState
-from .agents import AVAILABLE_AGENTS
+from state import TravelPlanState
+from agents import AVAILABLE_AGENTS
 
-# Supervisor system prompt that defines routing behavior
-SUPERVISOR_PROMPT = """
-You are a Travel Planning Supervisor that coordinates a team of specialized agents to create comprehensive travel plans.
+def create_supervisor_chain():
+    """Creates supervisor LLM chain for routing decisions"""
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are a Travel Planning Supervisor who coordinates a team of specialized agents.
 
 Your team consists of:
-- weather: Analyzes weather forecasts and packing recommendations
+- weather: Analyzes weather and provides packing recommendations
 - flight: Searches flights and booking options
-- accommodation: Finds hotels and lodging options  
+- accommodation: Finds hotels and accommodation  
 - activities: Discovers attractions and creates itineraries
 - budget: Calculates costs and provides budget analysis
 
-Your job is to:
-1. Analyze user travel requests
-2. Determine which agents need to gather information
-3. Route tasks to appropriate agents in logical order
-4. Coordinate results from all agents
-5. Provide final comprehensive travel recommendations
+When a user sends a travel planning request, analyze what they need and decide which agent should work next.
 
-Given the user's request and current conversation, decide which agent should work next.
-Respond with just the agent name or "FINISH" if planning is complete.
+Respond ONLY with the agent name (weather, flight, accommodation, activities, or budget) or "FINISH" if planning is complete.
 
-Available agents: {agents}
-"""
-
-def create_supervisor_chain():
-    """
-    Create the supervisor LLM chain for routing decisions.
+Logic: Run all agents one by one to achieve complete travel analysis."""),
+        ("human", "{input}")
+    ])
     
-    TODO: Implement supervisor chain creation
-    - Create ChatPromptTemplate with supervisor prompt
-    - Include MessagesPlaceholder for conversation history
-    - Initialize ChatOpenAI model 
-    - Create and return the complete chain
-    
-    Returns:
-        Configured supervisor chain for routing decisions
-    """
-    # TODO: Create prompt template with supervisor instructions
-    
-    # TODO: Initialize ChatOpenAI model for supervisor
-    
-    # TODO: Create the supervisor chain
-    
-    # TODO: Return configured chain
-    pass
+    llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0)
+    return prompt | llm
 
 def supervisor_node(state: TravelPlanState) -> dict:
-    """
-    Supervisor node that analyzes current state and routes to appropriate agents.
+    """Supervisor node that analyzes state and routes to agents"""
     
-    Args:
-        state: Current travel planning state
-        
-    Returns:
-        Updated state with next_agent routing decision
-        
-    TODO: Implement supervisor routing logic
-    - Get supervisor chain from create_supervisor_chain()
-    - Analyze current state and conversation history
-    - Determine which agent should work next based on:
-        * User's original request
-        * What information has already been gathered
-        * What's still missing for complete travel plan
-    - Update state.next_agent with routing decision
-    - Add supervisor message to conversation if needed
-    """
-    # TODO: Get supervisor chain
+    # Check which agents have already worked
+    completed_agents = set()
+    for msg in state["messages"]:
+        if isinstance(msg, AIMessage) and isinstance(msg.content, str):
+            if "Weather Agent:" in msg.content:
+                completed_agents.add("weather")
+            elif "Flight Agent:" in msg.content:
+                completed_agents.add("flight")
+            elif "Accommodation Agent:" in msg.content:
+                completed_agents.add("accommodation")
+            elif "Activities Agent:" in msg.content:
+                completed_agents.add("activities")
+            elif "Budget Agent:" in msg.content:
+                completed_agents.add("budget")
     
-    # TODO: Analyze current state and determine next agent
+    # Supervisor logic - run agents one by one
+    available_agents = ["weather", "flight", "accommodation", "activities", "budget"]
     
-    # TODO: Invoke supervisor chain to get routing decision
+    for agent in available_agents:
+        if agent not in completed_agents:
+            return {"next_agent": agent}
     
-    # TODO: Update state with next_agent decision
-    
-    # TODO: Add supervisor message to conversation
-    
-    return {"next_agent": "weather"}  # Placeholder
+    # All agents have finished
+    return {"next_agent": "FINISH"}
 
 def should_continue(state: TravelPlanState) -> Literal["continue", "end"]:
-    """
-    Conditional edge function that determines if supervisor workflow should continue.
+    """Decides whether workflow should continue"""
+    next_agent = state.get("next_agent")
     
-    Args:
-        state: Current travel planning state
-        
-    Returns:
-        "continue" if more agents need to work, "end" if planning is complete
-        
-    TODO: Implement continuation logic
-    - Check if supervisor decided "FINISH" 
-    - Check if all necessary agents have provided responses
-    - Check if planning_complete flag is set
-    - Return "end" if planning is done, "continue" otherwise
-    """
-    # TODO: Check if supervisor decided to finish
-    
-    # TODO: Check completion status
-    
-    # TODO: Return appropriate routing decision
-    
-    return "continue"  # Placeholder
+    if next_agent == "FINISH":
+        return "end"
+    else:
+        return "continue"
 
 def route_to_agent(state: TravelPlanState) -> str:
-    """
-    Router function that directs workflow to the appropriate agent.
+    """Routes workflow to appropriate agent"""
+    next_agent = state.get("next_agent")
     
-    Args:
-        state: Current travel planning state
-        
-    Returns:
-        Name of the next agent to execute
-        
-    TODO: Implement agent routing
-    - Read state.next_agent to determine routing
-    - Validate agent exists in AVAILABLE_AGENTS
-    - Return agent name for workflow routing
-    - Handle edge cases (invalid agent names, etc.)
-    """
-    # TODO: Get next agent from state
-    
-    # TODO: Validate agent exists
-    
-    # TODO: Return agent name for routing
-    
-    return "weather"  # Placeholder
+    if next_agent in AVAILABLE_AGENTS:
+        return next_agent
+    else:
+        return "weather"  # Default
 
 def final_coordinator(state: TravelPlanState) -> dict:
+    """Final coordinator that combines all agent responses"""
+    
+    # Combine all agent responses
+    agent_summaries = []
+    for msg in state["messages"]:
+        if isinstance(msg, AIMessage) and isinstance(msg.content, str):
+            if any(agent in msg.content for agent in ["Weather Agent:", "Flight Agent:", "Accommodation Agent:", "Activities Agent:", "Budget Agent:"]):
+                agent_summaries.append(msg.content)
+    
+    # Pass to LLM to create final travel plan
+    llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0.3)
+    
+    final_prompt = f"""
+    Based on all the research from specialized agents:
+    
+    {chr(10).join(agent_summaries)}
+    
+    Please create a short travel plan summary that combines all this information into a cohesive, actionable travel guide.
+    Include an executive summary and highlight the key recommendations from each area.
     """
-    Final coordination node that combines all agent responses into comprehensive plan.
     
-    Args:
-        state: Travel planning state with all agent responses
-        
-    Returns:
-        Updated state with final travel plan
-        
-    TODO: Implement final coordination logic
-    - Collect responses from all agents in state.agent_responses
-    - Combine weather, flight, accommodation, activities, and budget data
-    - Create comprehensive travel plan with:
-        * Executive summary
-        * Weather forecast and packing list
-        * Flight recommendations and booking links
-        * Accommodation options with pros/cons
-        * Daily itinerary suggestions
-        * Budget breakdown and total cost estimate
-    - Add final plan as AIMessage to state.messages
-    - Set planning_complete = True
-    """
-    # TODO: Collect all agent responses
-    
-    # TODO: Combine data into comprehensive travel plan
-    
-    # TODO: Create executive summary
-    
-    # TODO: Format final recommendations
-    
-    # TODO: Add final plan to conversation
-    
-    # TODO: Mark planning as complete
+    final_plan = llm.invoke(final_prompt).content
     
     return {
-        "messages": [AIMessage(content="TODO: Implement final travel plan coordination")],
+        "messages": [AIMessage(content=f"🎯 COMPREHENSIVE TRAVEL PLAN:\n\n{final_plan}")],
         "planning_complete": True
     } 
